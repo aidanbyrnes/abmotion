@@ -9,7 +9,7 @@
 #define PSWD "abwireless"
 
 #define ID 1
-#define SAMPLERATE 20 // 20Hz seems to be stable
+#define SAMPLERATE 50 // 20Hz seems to be stable
 #define RMS_WINDOW 100 //milliseconds
 
 #define DEADZONE .1
@@ -139,6 +139,8 @@ void setup() {
   Serial.println(">> Motion detected");
 
   //attempt to connect to WiFi. Sleep if stalled for too long.
+  WiFi.setSleep(false); // Added these two lines in attempt to fix a longstanding bug. 
+  Wire.setTimeOut(5000); // Will hopefully prevent hangups from WiFi causing I2C timing errors.
   WiFi.begin(SSID, PSWD);
   Serial.print(">> ");
   while (WiFi.status() != WL_CONNECTED) {
@@ -195,15 +197,15 @@ void loop() {
           bndl.add("/m").add(motion_scalar);
         }
 
-        //battery OSC message
-        if(battery != battery_hist_osc){
-          bndl.add("/b").add((int32_t)battery);
-        }
-
         if(qw != qw_hist || qx != qx_hist || qy != qy_hist || qz != qz_hist){
           bndl.add("/r").add(qw).add(qx).add(qy).add(qz);
         }
 
+        //battery OSC message
+        if(battery != battery_hist_osc){
+          bndl.add("/b").add((int32_t)battery);
+        }
+        
         motion_scalar_hist_osc = motion_scalar;
         battery_hist_osc = battery;
         qw_hist = qw;
