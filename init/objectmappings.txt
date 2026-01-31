@@ -1,0 +1,4 @@
+max define motion_graph bpatcher @name motion_graph;
+max define rotation_graph bpatcher @name rotation_graph;
+max define rad2deg gen @gen rad2deg;
+max define deg2rad gen @gen deg2rad;
