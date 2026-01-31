@@ -2,6 +2,8 @@ abmotion
 =============
 Wearable OSC motion devices designed for dance and interactive-immersive art.
 
+![Photo of abmotion device.](http://aidanbyrnes.net/media/abmotion.png)
+
 ## Hardware
 
 * CodeCell C3/C6 by [Microbots](https://microbots.io/)
