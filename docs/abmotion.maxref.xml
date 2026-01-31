@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml-stylesheet href="./c74ref.xsl" type="text/xsl"?>
+
+<c74object name="abmotion">
+
+<digest>
+    Get data from an abmotion device
+</digest>
+​
+<description>
+	Get data from an abmotion device.
+</description>
+
+<!--METADATA-->
+<metadatalist>
+    <metadata name="author">Aidan Byrnes</metadata>
+</metadatalist>
+
+<inletlist>
+    <inlet id="0" type="int">
+        <digest>Device port.</digest>
+    </inlet>
+</inletlist>
+
+<objarglist>
+    <objarg name="port" optional="1" type="int">
+        <digest>Device port.</digest>
+    </objarg>
+    <objarg name="motion-scale" optional="1" type="int">
+        <digest>Motion output scale, default it 0.02.</digest>
+    </objarg>
+</objarglist>
+
+</c74object>
