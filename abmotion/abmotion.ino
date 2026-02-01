@@ -9,7 +9,7 @@
 #define PSWD "abwireless"
 
 #define ID 1
-#define SAMPLERATE 50 // 20Hz seems to be stable
+#define SAMPLERATE 20 // 20Hz seems to be stable
 #define RMS_WINDOW 100 //milliseconds
 
 #define DEADZONE .1
