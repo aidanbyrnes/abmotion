@@ -6,7 +6,8 @@ Wearable OSC motion devices designed for dance and interactive-immersive art.
 
 ## Hardware
 
-* CodeCell C3/C6 by [Microbots](https://microbots.io/)
+* [Microbots CodeCell C3](https://microbots.io/products/codecell?variant=49714638782797)
+* [TinyCircuits 3.7V 500mAh Battery](https://www.digikey.com/en/products/detail/tinycircuits/ASR00035/9808767)
 
 ## Dependencies
 
