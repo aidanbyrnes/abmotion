@@ -3,10 +3,14 @@
 #include <ESPmDNS.h>
 #include <OSCBundle.h>
 #include <CodeCell.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
 
 // Network config
 #define SSID "abwireless"
 #define PSWD "abwireless"
+#define HOSTNAME "abmac"
 
 #define ID 1
 #define SAMPLERATE 20 // 20Hz seems to be stable
@@ -25,32 +29,36 @@
 // OSC destination
 String host;
 const int destPort = 8000 + ID;
-int osc_timer = 0;
 
 WiFiUDP Udp;
-
 CodeCell myCodeCell;
 
-float motion_scalar;
-float motion_scalar_hist;
-float motion_scalar_hist_osc;
+// Shared data
+struct SensorData {
+  float motion_scalar;
+  float qw, qx, qy, qz;
+  int battery;
+  bool data_updated;
+};
 
-int rms_index;
+// Global variables
+SensorData currentData = {0, 0, 0, 0, 0, 0, false};
+SensorData lastSentData = {0, 0, 0, 0, 0, 0, false};
+
+// FreeRTOS handles
+SemaphoreHandle_t dataMutex;
+TaskHandle_t sensorTaskHandle = NULL;
+TaskHandle_t wifiTaskHandle = NULL;
+
+// Sensor processing variables
+int rms_index = 0;
 int rms_samps;
-float rms_accum;
+float rms_accum = 0.0;
 float rms = 0.0;
-
 float lp_hist = 0.0;
 float lp = 0.0;
-float lp_alpha = 0.0;  // Will be calculated from frequency
-
-float qw, qx, qy, qz;
-float qw_hist, qx_hist, qy_hist, qz_hist;
-
+float lp_alpha = 0.0;
 int stationary_frames = 0;
-
-int battery = 0;
-int battery_hist_osc = -1;
 
 float calc_lp_alpha(float cutoff_freq, float sample_rate) {
   float rc = 1.0f / (2.0f * PI * cutoff_freq);
@@ -61,7 +69,7 @@ float calc_lp_alpha(float cutoff_freq, float sample_rate) {
 int calc_buffer_size(int sr){
   int size = (float)RMS_WINDOW / 1000.0f * sr;
   size = (size > 0) ? size : 1;
-  return (float)RMS_WINDOW / 1000.0f * sr;
+  return size;
 }
 
 float calc_motion_scalar(int sr = SAMPLERATE){
@@ -84,7 +92,7 @@ float calc_motion_scalar(int sr = SAMPLERATE){
   return lp;
 }
 
-void print_data(){
+void print_data(SensorData &data){
     Serial.print(">> ID: ");
     Serial.print(ID);
     Serial.print(", RMS samples: ");
@@ -94,19 +102,126 @@ void print_data(){
     timer = (timer > 0.0) ? SLEEP_TIMER - timer : SLEEP_TIMER;
     Serial.print(timer);
     Serial.print(", Motion: ");
-    Serial.print(motion_scalar);           // Print acceleration strength to Serial Monitor
+    Serial.print(data.motion_scalar);
     Serial.print(", Rotation: "); 
-    Serial.print(qw); Serial.print(" "); 
-    Serial.print(qx); Serial.print(" "); 
-    Serial.print(qy); Serial.print(" "); 
-    Serial.println(qz);
+    Serial.print(data.qw); Serial.print(" "); 
+    Serial.print(data.qx); Serial.print(" "); 
+    Serial.print(data.qy); Serial.print(" "); 
+    Serial.println(data.qz);
 }
 
 void getHost(){
-  host = MDNS.queryHost("abmac").toString();
+  host = MDNS.queryHost(HOSTNAME).toString();
   if(host == "0.0.0.0"){
     Serial.println(">> Could not connect to host");
     myCodeCell.SleepTimer(5);
+  }
+}
+
+void sensorTask(void *parameter) {
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  const TickType_t xFrequency = pdMS_TO_TICKS(1000 / SAMPLERATE);
+  
+  float motion_scalar_hist = 0.0;
+  float motion_scalar_local = 0.0;
+  
+  while(1) {
+    if (myCodeCell.Run(SAMPLERATE)) {
+      motion_scalar_hist = motion_scalar_local;
+      motion_scalar_local = calc_motion_scalar();
+
+      // Check for sleep condition
+      if(motion_scalar_local == 0 || motion_scalar_local == motion_scalar_hist){
+        if((float)stationary_frames / SAMPLERATE >= SLEEP_TIMER + RMS_WINDOW / 1000.){
+          myCodeCell.SleepTimer(1);
+        }
+        else{
+          stationary_frames++;
+        }
+      }
+      else{
+        stationary_frames = 0;
+      }
+
+      // Update shared data with mutex protection
+      if(xSemaphoreTake(dataMutex, portMAX_DELAY) == pdTRUE) {
+        currentData.motion_scalar = motion_scalar_local;
+        
+        myCodeCell.Motion_RotationVectorRead(
+          currentData.qw, 
+          currentData.qx, 
+          currentData.qy, 
+          currentData.qz
+        );
+        
+        currentData.battery = myCodeCell.BatteryLevelRead();
+        
+        currentData.data_updated = true;
+        xSemaphoreGive(dataMutex);
+      }
+    }
+    
+    // Wait for next cycle (maintains consistent sample rate)
+    vTaskDelayUntil(&xLastWakeTime, xFrequency);
+  }
+}
+
+// WiFi/OSC Task
+void wifiTask(void *parameter) {
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  const TickType_t xFrequency = pdMS_TO_TICKS(1000 / OSC_RATE);
+  
+  SensorData localData;
+  
+  while(1) {
+    // Copy data with mutex protection
+    if(xSemaphoreTake(dataMutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      if(currentData.data_updated) {
+        localData = currentData;
+        currentData.data_updated = false;
+      }
+      xSemaphoreGive(dataMutex);
+    }
+
+    if(OSC_ENABLE && WiFi.status() == WL_CONNECTED){
+      OSCBundle bndl;
+
+      // Send motion scalar if changed
+      if(localData.motion_scalar != lastSentData.motion_scalar){
+        bndl.add("/m").add(localData.motion_scalar);
+        lastSentData.motion_scalar = localData.motion_scalar;
+      }
+
+      // Send rotation if changed
+      if(localData.qw != lastSentData.qw || 
+         localData.qx != lastSentData.qx || 
+         localData.qy != lastSentData.qy || 
+         localData.qz != lastSentData.qz){
+        bndl.add("/r").add(localData.qw).add(localData.qx).add(localData.qy).add(localData.qz);
+        lastSentData.qw = localData.qw;
+        lastSentData.qx = localData.qx;
+        lastSentData.qy = localData.qy;
+        lastSentData.qz = localData.qz;
+      }
+
+      // Send battery if changed
+      if(localData.battery != lastSentData.battery){
+        bndl.add("/b").add((int32_t)localData.battery);
+        lastSentData.battery = localData.battery;
+      }
+
+      // Send packet if it has messages
+      if(bndl.size() > 0){
+        Udp.beginPacket(host.c_str(), destPort);
+        bndl.send(Udp);
+        Udp.endPacket();
+      }
+    }
+
+    print_data(localData);
+    
+    // Wait for next cycle
+    vTaskDelayUntil(&xLastWakeTime, xFrequency);
   }
 }
 
@@ -122,8 +237,7 @@ void setup() {
   Serial.print(" Hz): ");
   Serial.println(lp_alpha);
 
-  //wait for some initial motion on startup before trying for WiFi
-  
+  // Wait for some initial motion on startup before trying for WiFi
   int init_sr = 10; //samplerate for init
 
   Serial.println(">> Waiting for motion...");
@@ -138,9 +252,9 @@ void setup() {
   }
   Serial.println(">> Motion detected");
 
-  //attempt to connect to WiFi. Sleep if stalled for too long.
-  WiFi.setSleep(false); // Added these two lines in attempt to fix a longstanding bug. 
-  Wire.setTimeOut(5000); // Will hopefully prevent hangups from WiFi causing I2C timing errors.
+  // Attempt to connect to WiFi
+  WiFi.setSleep(false);
+  Wire.setTimeOut(5000);
   WiFi.begin(SSID, PSWD);
   Serial.print(">> ");
   while (WiFi.status() != WL_CONNECTED) {
@@ -153,7 +267,7 @@ void setup() {
   }
   Serial.println(WiFi.localIP());
 
-  //device will be discoverable as 'abmotionID' on WiFi
+  // Device will be discoverable as 'abmotion[ID]' on WiFi
   if (!MDNS.begin("abmotion" + String(ID))) {
     Serial.println(">> Error starting mDNS");
     return;
@@ -163,70 +277,36 @@ void setup() {
   getHost();
   Serial.println(">> Host: " + host);
 
-  Udp.begin(9000); 
+  Udp.begin(9000);
+
+  // Create mutex for data protection
+  dataMutex = xSemaphoreCreateMutex();
+  if(dataMutex == NULL) {
+    Serial.println(">> Failed to create mutex!");
+    return;
+  }
+
+  xTaskCreate(
+    sensorTask,           // Task function
+    "SensorTask",         // Name
+    4096,                 // Stack size
+    NULL,                 // Parameters
+    2,                    // Priority (higher)
+    &sensorTaskHandle     // Task handle
+  );
+
+  xTaskCreate(
+    wifiTask,             // Task function
+    "WiFiTask",           // Name
+    4096,                 // Stack size
+    NULL,                 // Parameters
+    1,                    // Priority (lower)
+    &wifiTaskHandle       // Task handle
+  );
+
+  Serial.println(">> FreeRTOS tasks created");
 }
 
 void loop() {
-  if (myCodeCell.Run(SAMPLERATE)) {         
-    motion_scalar_hist = motion_scalar;
-    motion_scalar = calc_motion_scalar();
-
-    //Sleep after Ns of no motion
-    if(motion_scalar == 0 || motion_scalar == motion_scalar_hist){
-      if((float)stationary_frames / SAMPLERATE >= SLEEP_TIMER + RMS_WINDOW / 1000.){
-          myCodeCell.SleepTimer(1);
-      }
-      else{
-          stationary_frames++;
-      }
-    }
-    else{
-      stationary_frames = 0;
-    }
-
-    if(osc_timer >= SAMPLERATE / OSC_RATE){
-
-      battery = myCodeCell.BatteryLevelRead();
-      myCodeCell.Motion_RotationVectorRead(qw, qx, qy, qz);
-
-      if(OSC_ENABLE){
-        OSCBundle bndl;
-
-        //send motion scalar
-        if(motion_scalar != motion_scalar_hist_osc){
-          bndl.add("/m").add(motion_scalar);
-        }
-
-        if(qw != qw_hist || qx != qx_hist || qy != qy_hist || qz != qz_hist){
-          bndl.add("/r").add(qw).add(qx).add(qy).add(qz);
-        }
-
-        //battery OSC message
-        if(battery != battery_hist_osc){
-          bndl.add("/b").add((int32_t)battery);
-        }
-        
-        motion_scalar_hist_osc = motion_scalar;
-        battery_hist_osc = battery;
-        qw_hist = qw;
-        qx_hist = qx;
-        qy_hist = qy;
-        qz_hist = qz;
-
-        //send packet if it has messages
-        if(bndl.size() > 0){
-          Udp.beginPacket(host.c_str(), destPort);
-          bndl.send(Udp);
-          Udp.endPacket();
-        }
-      }
-
-      print_data();
-
-      osc_timer = 0;
-    }
-    else{
-      osc_timer++;
-    }
-  }
+  vTaskDelay(portMAX_DELAY);
 }
