@@ -6,11 +6,11 @@
 #include <freertos/queue.h>
 
 #define DEVICE_ID 1
-#define SAMPLERATE 30 //Hz
+#define SAMPLERATE 20 //Hz
 
 #define SEND_RATE 10 //Hz
 
-#define RMS_WINDOW 100 //milliseconds
+#define RMS_WINDOW 200 //milliseconds
 #define DEADZONE .1
 #define LP_CUTOFF_FREQ 2.0f  // Low-pass cutoff frequency in Hz
 #define SLEEP_TIMER 5 // How many seconds to wait until sleep when device is active
@@ -96,16 +96,20 @@ float calc_motion_scalar(int sr = SAMPLERATE){
   return lp;
 }
 
-void freeze_check(){
+bool freeze_check(){
     if(ax == ax_hist && ay == ay_hist && az == az_hist && qw == qw_hist && qx == qx_hist && qy == qy_hist && qz == qz_hist){
-      frozen_frames++;
       if(frozen_frames > MAX_FROZEN){
         Serial.println(">> Freeze detected");
         ESP.restart();
       }
+      else{
+        frozen_frames++;
+        return true;
+      }
     }
     else{
       frozen_frames = 0;
+      return false;
     }
 }
 
@@ -119,7 +123,6 @@ void sensorTask(void *parameter) {
   
   while(1) {
     if(myCodeCell.Run(SAMPLERATE)) {
-      motion_hist = data.motion;
       data.motion = calc_motion_scalar();
 
       qw_hist = qw;
@@ -129,7 +132,8 @@ void sensorTask(void *parameter) {
       myCodeCell.Motion_RotationVectorRead(qw, qx, qy, qz);
 
       // Check for frozen data
-      freeze_check();
+      // Don't update packet with frozen data
+      if(freeze_check()){ continue; }
 
       // Check for sleep condition is device is still
       // if(data.motion < 0.001 || data.motion == motion_hist){
@@ -205,6 +209,8 @@ void setup() {
   // Serial.println(">> Motion detected");
 
   WiFi.mode(WIFI_STA);
+  // Optimize RF power usage
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
 
   if (esp_now_init() != ESP_OK) {
     Serial.println("ESP-NOW init failed");
