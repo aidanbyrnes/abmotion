@@ -88,7 +88,7 @@
                     "numinlets": 1,
                     "numoutlets": 3,
                     "outlettype": [ "jit_matrix", "bang", "" ],
-                    "patching_rect": [ 15.0, 240.0, 482.0, 22.0 ],
+                    "patching_rect": [ 15.0, 240.0, 483.0, 22.0 ],
                     "text": "jit.world #0-abmotion @visible 0 @output_matrix 1 @dim 180 75 @erase_color 0 0 0 1"
                 }
             },
@@ -110,8 +110,8 @@
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "jit_gl_texture", "" ],
-                    "patching_rect": [ 450.0, 210.0, 157.0, 22.0 ],
-                    "text": "jit.gl.camera #0-abmotion"
+                    "patching_rect": [ 450.0, 210.0, 317.0, 22.0 ],
+                    "text": "jit.gl.camera #0-abmotion @rotatexyz 0 180 0 @ortho 1"
                 }
             },
             {
@@ -121,8 +121,8 @@
                     "numinlets": 9,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 450.0, 180.0, 288.0, 22.0 ],
-                    "text": "jit.gl.mesh #0-abmotion @axes 1 @position 0 0 -2"
+                    "patching_rect": [ 450.0, 180.0, 347.0, 22.0 ],
+                    "text": "jit.gl.mesh #0-abmotion @axes 1 @position 0 0 8 @scale 0.5"
                 }
             },
             {

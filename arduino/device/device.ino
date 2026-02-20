@@ -4,62 +4,46 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
+#include <Quaternion.h>
 
 #define DEVICE_ID 1
-#define SAMPLERATE 20 //Hz
+#define SAMPLERATE 20 // Hz
+#define SEND_RATE 10  // Hz
 
-#define SEND_RATE 10 //Hz
-
-#define RMS_WINDOW 200 //milliseconds
+#define RMS_WINDOW 200 // milliseconds
 #define DEADZONE .1
-#define LP_CUTOFF_FREQ 2.0f  // Low-pass cutoff frequency in Hz
-#define SLEEP_TIMER 5 // How many seconds to wait until sleep when device is active
-#define MAX_FROZEN 5 // How many consecutive frames are allowed to be the same before sensor is considered frozen
+#define LP_CUTOFF_FREQ 2.0f
+#define MAX_FROZEN 5
 
 CodeCell myCodeCell;
 
-uint8_t receiverMAC[] = {0x28, 0x37, 0x2F, 0xC9, 0x04, 0x24};  // <-- change to receiver MAC
+uint8_t receiverMAC[] = {0xBC, 0xDD, 0xC2, 0x2F, 0x5A, 0x24};
+
+#define SENSOR_DATA_LEN 5 // 3 slots reserved for future use
 
 typedef struct __attribute__((packed)) {
   unsigned int deviceID;
-  float motion_scalar;
-  float qw;
-  float qx;
-  float qy;
-  float qz;
   unsigned int battery;
+  float data[SENSOR_DATA_LEN];
 } DataPacket;
-
-typedef struct {
-  float motion;
-  float qw;
-  float qx;
-  float qy;
-  float qz;
-  unsigned int battery;
-} SensorData;
 
 TaskHandle_t sensorTaskHandle = NULL;
 TaskHandle_t espnowTaskHandle = NULL;
-
 QueueHandle_t sensorDataQueue;
 
-// motion processing
-float motion_hist;
-int rms_index = 0;
-int rms_samps;
 float rms_accum = 0.0;
 float rms = 0.0;
-float lp_hist = 0.0;
 float lp = 0.0;
 float lp_alpha = 0.0;
-int stationary_frames = 0;
+int rms_index = 0;
+int rms_samps;
 int frozen_frames = 0;
 
 float ax = 0, ay = 0, az = 0;
-float qw = 1, qx = 0, qy = 0, qz = 0;
 float ax_hist = 0, ay_hist = 0, az_hist = 0;
 float qw_hist = 1, qx_hist = 0, qy_hist = 0, qz_hist = 0;
+
+Quaternion quat;
 
 float calc_lp_alpha(float cutoff_freq, float sample_rate) {
   float rc = 1.0f / (2.0f * PI * cutoff_freq);
@@ -67,99 +51,88 @@ float calc_lp_alpha(float cutoff_freq, float sample_rate) {
   return dt / (rc + dt);
 }
 
-int calc_buffer_size(int sr){
+int calc_buffer_size(int sr) {
   int size = (float)RMS_WINDOW / 1000.0f * sr;
-  size = (size > 0) ? size : 1;
-  return size;
+  return (size > 0) ? size : 1;
 }
 
-float calc_motion_scalar(int sr = SAMPLERATE){
+void calc_motion_scalar(int sr = SAMPLERATE) {
   ax_hist = ax;
   ay_hist = ay;
   az_hist = az;
 
   myCodeCell.Motion_LinearAccRead(ax, ay, az);
-  rms_accum += ax * ax + ay * ay + az * az; //magnitude of accel squared
 
+  rms_accum += ax * ax + ay * ay + az * az;
   rms_index++;
   rms_samps = calc_buffer_size(sr);
-  if(rms_index == rms_samps){
+
+  if (rms_index >= rms_samps) {
     rms = sqrt(rms_accum / rms_samps);
     rms *= (rms >= DEADZONE);
     rms_index = 0;
     rms_accum = 0.0;
   }
 
-  lp_hist = lp;
-  lp = rms * lp_alpha + (1 - lp_alpha) * lp_hist;
-
-  return lp;
+  lp = rms * lp_alpha + (1.0f - lp_alpha) * lp;
 }
 
-bool freeze_check(){
-    if(ax == ax_hist && ay == ay_hist && az == az_hist && qw == qw_hist && qx == qx_hist && qy == qy_hist && qz == qz_hist){
-      if(frozen_frames > MAX_FROZEN){
-        Serial.println(">> Freeze detected");
-        ESP.restart();
-      }
-      else{
-        frozen_frames++;
-        return true;
-      }
+bool freeze_check() {
+  if (ax == ax_hist && ay == ay_hist && az == az_hist &&
+      quat.w == qw_hist && quat.x == qx_hist &&
+      quat.y == qy_hist && quat.z == qz_hist) {
+
+    if (frozen_frames > MAX_FROZEN) {
+      Serial.println(">> Freeze detected");
+      ESP.restart();
+    } else {
+      frozen_frames++;
+      return true;
     }
-    else{
-      frozen_frames = 0;
-      return false;
-    }
+  } else {
+    frozen_frames = 0;
+  }
+
+  return false;
 }
 
 void sensorTask(void *parameter) {
-  TickType_t xLastWakeTime = xTaskGetTickCount();
-  
-  unsigned int sample_count = 0;
+
   const unsigned int send_interval = SAMPLERATE / SEND_RATE;
-  
-  SensorData data;
-  
-  while(1) {
-    if(myCodeCell.Run(SAMPLERATE)) {
-      data.motion = calc_motion_scalar();
+  unsigned int sample_count = 0;
 
-      qw_hist = qw;
-      qx_hist = qx;
-      qy_hist = qy;
-      qz_hist = qz;
-      myCodeCell.Motion_RotationVectorRead(qw, qx, qy, qz);
+  DataPacket packet;
+  packet.deviceID = DEVICE_ID;
 
-      // Check for frozen data
-      // Don't update packet with frozen data
-      if(freeze_check()){ continue; }
+  while (1) {
 
-      // Check for sleep condition is device is still
-      // if(data.motion < 0.001 || data.motion == motion_hist){
-      //   if((float)stationary_frames / SAMPLERATE >= SLEEP_TIMER + RMS_WINDOW / 1000.){
-      //     myCodeCell.SleepTimer(0);
-      //   }
-      //   else{
-      //     stationary_frames++;
-      //   }
-      // }
-      // else{
-      //   stationary_frames = 0;
-      // }
-      
+    if (myCodeCell.Run(SAMPLERATE)) {
+
+      calc_motion_scalar();
+
+      qw_hist = quat.w;
+      qx_hist = quat.x;
+      qy_hist = quat.y;
+      qz_hist = quat.z;
+      myCodeCell.Motion_RotationVectorRead(quat.w, quat.x, quat.y, quat.z);
+
+      if (freeze_check()) continue;
+
       sample_count++;
-      
-      if(sample_count >= send_interval) {
-        data.qw = qw;
-        data.qx = qx;
-        data.qy = qy;
-        data.qz = qz;
 
-        data.battery = (unsigned int)myCodeCell.BatteryLevelRead();
-        
-        xQueueSend(sensorDataQueue, &data, 0);
-        
+      if (sample_count >= send_interval) {
+
+        packet.data[0] = lp;
+
+        packet.data[1] = quat.w;
+        packet.data[2] = quat.x;
+        packet.data[3] = quat.y;
+        packet.data[4] = quat.z;
+
+        packet.battery = (unsigned int)myCodeCell.BatteryLevelRead();
+
+        xQueueSend(sensorDataQueue, &packet, 0);
+
         sample_count = 0;
       }
     }
@@ -167,49 +140,36 @@ void sensorTask(void *parameter) {
 }
 
 void espnowTask(void *parameter) {
-  SensorData data;
+
   DataPacket packet;
-  packet.deviceID = DEVICE_ID;
-  
-  while(1) {
-    if(xQueueReceive(sensorDataQueue, &data, portMAX_DELAY) == pdTRUE) {
-      packet.motion_scalar = data.motion;
-      packet.qw = data.qw;
-      packet.qx = data.qx;
-      packet.qy = data.qy;
-      packet.qz = data.qz;
-      packet.battery = data.battery;
-      
-      esp_err_t result = esp_now_send(receiverMAC, (uint8_t*)&packet, sizeof(packet));
+
+  while (1) {
+
+    if (xQueueReceive(sensorDataQueue, &packet, portMAX_DELAY) == pdTRUE) {
+
+      esp_err_t result = esp_now_send(
+        receiverMAC,
+        (uint8_t*)&packet,
+        sizeof(packet)
+      );
+
       if (result != ESP_OK) {
-          Serial.printf(">> Send failed: %d\n", result);
+        Serial.printf(">> Send failed: %d\n", result);
       }
     }
   }
 }
 
 void setup() {
+
   Serial.begin(115200);
+
   myCodeCell.Init(MOTION_LINEAR_ACC + MOTION_ROTATION);
   myCodeCell.LED_SetBrightness(0);
 
   lp_alpha = calc_lp_alpha(LP_CUTOFF_FREQ, SAMPLERATE);
 
-  // // Wait for some initial motion on startup
-  // Serial.println(">> Waiting for motion..");
-  // int init_sr = 10;
-  // // Run once to update sensors
-  // myCodeCell.Run(init_sr);
-  // float init_motion = 0.0;
-  // while(init_motion == 0.0){
-  //   if(myCodeCell.Run(init_sr)){
-  //     init_motion = calc_motion_scalar(init_sr);
-  //   }
-  // }
-  // Serial.println(">> Motion detected");
-
   WiFi.mode(WIFI_STA);
-  // Optimize RF power usage
   WiFi.setTxPower(WIFI_POWER_8_5dBm);
 
   if (esp_now_init() != ESP_OK) {
@@ -224,25 +184,10 @@ void setup() {
 
   esp_now_add_peer(&peerInfo);
 
-  sensorDataQueue = xQueueCreate(2, sizeof(SensorData));
+  sensorDataQueue = xQueueCreate(2, sizeof(DataPacket));
 
-  xTaskCreate(
-    sensorTask,
-    "SensorTask",
-    4096,
-    NULL,
-    2,
-    &sensorTaskHandle
-  );
-
-  xTaskCreate(
-    espnowTask,
-    "ESPNowTask",
-    4096,
-    NULL,
-    1,
-    &espnowTaskHandle
-  );
+  xTaskCreate(sensorTask, "SensorTask", 4096, NULL, 2, &sensorTaskHandle);
+  xTaskCreate(espnowTask, "ESPNowTask", 4096, NULL, 1, &espnowTaskHandle);
 }
 
 void loop() {
