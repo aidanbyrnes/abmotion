@@ -9,11 +9,22 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 34.0, 87.0, 1170.0, 779.0 ],
+        "rect": [ 34.0, 87.0, 1852.0, 959.0 ],
         "gridsnaponopen": 2,
         "objectsnaponopen": 0,
         "integercoordinates": 1,
         "boxes": [
+            {
+                "box": {
+                    "id": "obj-26",
+                    "maxclass": "newobj",
+                    "numinlets": 1,
+                    "numoutlets": 1,
+                    "outlettype": [ "bang" ],
+                    "patching_rect": [ 570.0, 240.0, 22.0, 22.0 ],
+                    "text": "t b"
+                }
+            },
             {
                 "box": {
                     "id": "obj-61",
@@ -372,7 +383,7 @@
                             "parameter_initial": [ 0 ],
                             "parameter_initial_enable": 1,
                             "parameter_linknames": 1,
-                            "parameter_longname": "live.numbox",
+                            "parameter_longname": "live.numbox[2]",
                             "parameter_mmax": 10000.0,
                             "parameter_modmode": 0,
                             "parameter_shortname": "Freq",
@@ -490,8 +501,8 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "bang" ],
-                    "patching_rect": [ 578.0, 337.0, 55.0, 22.0 ],
-                    "text": "del 1000"
+                    "patching_rect": [ 578.0, 337.0, 48.0, 22.0 ],
+                    "text": "del 500"
                 }
             },
             {
@@ -760,6 +771,12 @@
             },
             {
                 "patchline": {
+                    "destination": [ "obj-25", 0 ],
+                    "source": [ "obj-26", 0 ]
+                }
+            },
+            {
+                "patchline": {
                     "destination": [ "obj-31", 1 ],
                     "order": 1,
                     "source": [ "obj-28", 0 ]
@@ -836,7 +853,15 @@
             },
             {
                 "patchline": {
+                    "destination": [ "obj-26", 0 ],
+                    "order": 0,
+                    "source": [ "obj-36", 0 ]
+                }
+            },
+            {
+                "patchline": {
                     "destination": [ "obj-4", 0 ],
+                    "order": 1,
                     "source": [ "obj-36", 0 ]
                 }
             },
@@ -1020,12 +1045,6 @@
                 "patchline": {
                     "destination": [ "obj-14", 0 ],
                     "source": [ "obj-7", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-25", 0 ],
-                    "source": [ "obj-72", 3 ]
                 }
             },
             {

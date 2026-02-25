@@ -2,3 +2,5 @@ max define abmotion_graph bpatcher @name abmotion_graph;
 max define pose_select bpatcher @name pose_select;
 max define rad2deg gen @gen rad2deg;
 max define deg2rad gen @gen deg2rad;
+max define scalar_comp @gen scalar_comp;
+max define abmotion.skeleton bpatcher @name abmotion.skeleton
