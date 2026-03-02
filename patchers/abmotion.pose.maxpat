@@ -18,7 +18,7 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "float" ],
-                    "patching_rect": [ 81.0, 133.0, 33.0, 22.0 ],
+                    "patching_rect": [ 15.0, 120.0, 33.0, 22.0 ],
                     "text": "* 0.5"
                 }
             },

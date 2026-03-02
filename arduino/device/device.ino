@@ -4,7 +4,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
-#include <Quaternion.h>
 
 #define DEVICE_ID 1
 #define SAMPLERATE 20 // Hz
@@ -17,7 +16,8 @@
 
 CodeCell myCodeCell;
 
-uint8_t receiverMAC[] = {0xBC, 0xDD, 0xC2, 0x2F, 0x5A, 0x24};
+//AC:A7:04:D4:DA:88
+uint8_t receiverMAC[] = {0xAC, 0xA7, 0x04, 0xD4, 0xDA, 0x88}; // Change to receiver MAC address
 
 #define SENSOR_DATA_LEN 5 // 3 slots reserved for future use
 
@@ -40,10 +40,9 @@ int rms_samps;
 int frozen_frames = 0;
 
 float ax = 0, ay = 0, az = 0;
+float qw = 0, qx = 0, qy = 0, qz = 0;
 float ax_hist = 0, ay_hist = 0, az_hist = 0;
 float qw_hist = 1, qx_hist = 0, qy_hist = 0, qz_hist = 0;
-
-Quaternion quat;
 
 float calc_lp_alpha(float cutoff_freq, float sample_rate) {
   float rc = 1.0f / (2.0f * PI * cutoff_freq);
@@ -79,8 +78,8 @@ void calc_motion_scalar(int sr = SAMPLERATE) {
 
 bool freeze_check() {
   if (ax == ax_hist && ay == ay_hist && az == az_hist &&
-      quat.w == qw_hist && quat.x == qx_hist &&
-      quat.y == qy_hist && quat.z == qz_hist) {
+      qw == qw_hist && qx == qx_hist &&
+      qy == qy_hist && qz == qz_hist) {
 
     if (frozen_frames > MAX_FROZEN) {
       Serial.println(">> Freeze detected");
@@ -110,13 +109,14 @@ void sensorTask(void *parameter) {
 
       calc_motion_scalar();
 
-      qw_hist = quat.w;
-      qx_hist = quat.x;
-      qy_hist = quat.y;
-      qz_hist = quat.z;
-      myCodeCell.Motion_RotationVectorRead(quat.w, quat.x, quat.y, quat.z);
+      qw_hist = qw;
+      qx_hist = qx;
+      qy_hist = qy;
+      qz_hist = qz;
+      myCodeCell.Motion_RotationVectorRead(qw, qx, qy, qz);
 
-      if (freeze_check()) continue;
+      freeze_check();
+      //if (freeze_check()) continue;
 
       sample_count++;
 
@@ -124,10 +124,10 @@ void sensorTask(void *parameter) {
 
         packet.data[0] = lp;
 
-        packet.data[1] = quat.w;
-        packet.data[2] = quat.x;
-        packet.data[3] = quat.y;
-        packet.data[4] = quat.z;
+        packet.data[1] = qw;
+        packet.data[2] = qx;
+        packet.data[3] = qy;
+        packet.data[4] = qz;
 
         packet.battery = (unsigned int)myCodeCell.BatteryLevelRead();
 

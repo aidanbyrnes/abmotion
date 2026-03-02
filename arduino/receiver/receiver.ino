@@ -6,6 +6,15 @@
   #include <esp_now.h>
 #endif
 
+#include <OSCBundle.h>
+#include <SLIPEncodedSerial.h>
+
+#ifdef BOARD_HAS_USB_SERIAL
+SLIPEncodedUSBSerial SLIPSerial( thisBoardsSerialUSB );
+#else
+SLIPEncodedSerial SLIPSerial(Serial);
+#endif
+
 #define SENSOR_DATA_LEN 5
 
 typedef struct __attribute__((packed)) {
@@ -24,21 +33,28 @@ void onReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
   if (len == sizeof(DataPacket)) {
     memcpy(&incomingPacket, data, sizeof(DataPacket));
 
-    Serial.print(incomingPacket.deviceID); Serial.print(" ");
-    Serial.print(incomingPacket.battery);  Serial.print(" ");
+    OSCBundle bndl;
+    String header = "/abmotion/" + String(incomingPacket.deviceID);
+    String batteryHeader = header + "/b";
+    String motionHeader = header + "/m";
+    String rotationHeader = header + "/r";
 
-    for (int i = 0; i < SENSOR_DATA_LEN; i++) {
-      if (i < SENSOR_DATA_LEN - 1) {
-        Serial.print(incomingPacket.data[i]); Serial.print(" ");
-      } else {
-        Serial.println(incomingPacket.data[i]);
-      }
-    }
+    bndl.add(batteryHeader.c_str()).add(incomingPacket.battery);
+    bndl.add(motionHeader.c_str()).add(incomingPacket.data[0]);
+    bndl.add(rotationHeader.c_str()).add(incomingPacket.data[1])
+                                    .add(incomingPacket.data[2])
+                                    .add(incomingPacket.data[3])
+                                    .add(incomingPacket.data[4]);
+
+    SLIPSerial.beginPacket();
+    bndl.send(SLIPSerial);
+    SLIPSerial.endPacket();
+    bndl.empty();
   }
 }
 
 void setup() {
-  Serial.begin(115200);
+  SLIPSerial.begin(115200);
 
   WiFi.mode(WIFI_STA);
 #if defined(ESP8266)
@@ -51,7 +67,6 @@ void setup() {
 #elif defined(ESP32)
   if (esp_now_init() != ESP_OK) {
 #endif
-    Serial.println("ESP-NOW init failed");
     return;
   }
 
