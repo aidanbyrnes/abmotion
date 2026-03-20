@@ -9,7 +9,7 @@
             "modernui": 1
         },
         "classnamespace": "box",
-        "rect": [ 34.0, 87.0, 1372.0, 779.0 ],
+        "rect": [ 34.0, 87.0, 1852.0, 959.0 ],
         "gridsnaponopen": 2,
         "objectsnaponopen": 0,
         "integercoordinates": 1,
@@ -21,7 +21,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 150.0, 525.0, 118.0, 22.0 ],
+                    "patching_rect": [ 120.0, 555.0, 118.0, 22.0 ],
                     "text": "convertToMaxFrame"
                 }
             },
@@ -546,7 +546,7 @@
                     "numinlets": 2,
                     "numoutlets": 1,
                     "outlettype": [ "int" ],
-                    "patching_rect": [ 367.0, 556.0, 30.0, 22.0 ],
+                    "patching_rect": [ 435.0, 540.0, 30.0, 22.0 ],
                     "text": "i"
                 }
             },
@@ -702,12 +702,12 @@
                     "maxclass": "outlet",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 367.0, 618.0, 30.0, 30.0 ]
+                    "patching_rect": [ 435.0, 602.0, 30.0, 30.0 ]
                 }
             },
             {
                 "box": {
-                    "comment": "rotation",
+                    "comment": "rotation / distance",
                     "id": "obj-11",
                     "index": 2,
                     "maxclass": "outlet",
@@ -775,11 +775,11 @@
                 "box": {
                     "id": "obj-4",
                     "maxclass": "newobj",
-                    "numinlets": 4,
-                    "numoutlets": 4,
-                    "outlettype": [ "", "", "", "" ],
-                    "patching_rect": [ 15.0, 270.0, 77.0, 22.0 ],
-                    "text": "route /m /r /b"
+                    "numinlets": 5,
+                    "numoutlets": 5,
+                    "outlettype": [ "", "", "", "", "" ],
+                    "patching_rect": [ 15.0, 270.0, 90.0, 22.0 ],
+                    "text": "route /m /r /b /d"
                 }
             },
             {
@@ -989,6 +989,12 @@
                 "patchline": {
                     "destination": [ "obj-1", 0 ],
                     "source": [ "obj-4", 1 ]
+                }
+            },
+            {
+                "patchline": {
+                    "destination": [ "obj-11", 0 ],
+                    "source": [ "obj-4", 3 ]
                 }
             },
             {

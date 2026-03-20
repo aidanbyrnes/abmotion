@@ -5,7 +5,7 @@
 #include <freertos/task.h>
 #include <freertos/queue.h>
 
-#define DEVICE_ID 1
+#define DEVICE_ID 10
 #define SAMPLERATE 20 // Hz
 #define SEND_RATE 10  // Hz
 
@@ -176,7 +176,6 @@ void setup() {
     Serial.println("ESP-NOW init failed");
     return;
   }
-
   esp_now_peer_info_t peerInfo = {};
   memcpy(peerInfo.peer_addr, receiverMAC, 6);
   peerInfo.channel = 0;

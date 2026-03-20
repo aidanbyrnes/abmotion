@@ -4,7 +4,7 @@
         "appversion": {
             "major": 9,
             "minor": 1,
-            "revision": 1,
+            "revision": 2,
             "architecture": "x64",
             "modernui": 1
         },
@@ -13,12 +13,23 @@
         "boxes": [
             {
                 "box": {
+                    "id": "obj-4",
+                    "maxclass": "newobj",
+                    "numinlets": 1,
+                    "numoutlets": 1,
+                    "outlettype": [ "" ],
+                    "patching_rect": [ 15.0, 60.0, 63.0, 22.0 ],
+                    "text": "valid_quat"
+                }
+            },
+            {
+                "box": {
                     "id": "obj-3",
                     "maxclass": "newobj",
                     "numinlets": 2,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 15.0, 210.0, 55.0, 22.0 ],
+                    "patching_rect": [ 15.0, 240.0, 55.0, 22.0 ],
                     "text": "zl.slice 3"
                 }
             },
@@ -30,7 +41,7 @@
                     "maxclass": "outlet",
                     "numinlets": 1,
                     "numoutlets": 0,
-                    "patching_rect": [ 15.0, 241.0, 30.0, 30.0 ]
+                    "patching_rect": [ 15.0, 270.0, 30.0, 30.0 ]
                 }
             },
             {
@@ -52,7 +63,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 135.0, 90.0, 150.0, 22.0 ],
+                    "patching_rect": [ 135.0, 120.0, 150.0, 22.0 ],
                     "text": "loadmess /quat #1 #2 #3 0"
                 }
             },
@@ -63,7 +74,7 @@
                     "numinlets": 2,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 15.0, 180.0, 66.0, 22.0 ],
+                    "patching_rect": [ 15.0, 210.0, 66.0, 22.0 ],
                     "text": "route /quat"
                 }
             },
@@ -74,7 +85,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 135.0, 150.0, 83.0, 22.0 ],
+                    "patching_rect": [ 135.0, 180.0, 83.0, 22.0 ],
                     "text": "prepend /quat"
                 }
             },
@@ -85,7 +96,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 15.0, 90.0, 83.0, 22.0 ],
+                    "patching_rect": [ 15.0, 120.0, 83.0, 22.0 ],
                     "text": "prepend /quat"
                 }
             },
@@ -96,7 +107,7 @@
                     "numinlets": 2,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 15.0, 150.0, 109.0, 22.0 ],
+                    "patching_rect": [ 15.0, 180.0, 109.0, 22.0 ],
                     "text": "spat5.quat.multiply"
                 }
             },
@@ -107,7 +118,7 @@
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 135.0, 120.0, 107.0, 22.0 ],
+                    "patching_rect": [ 135.0, 150.0, 107.0, 22.0 ],
                     "text": "spat5.quat.inverse"
                 }
             },
@@ -118,7 +129,7 @@
                     "numinlets": 1,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 15.0, 60.0, 29.5, 22.0 ],
+                    "patching_rect": [ 15.0, 90.0, 29.5, 22.0 ],
                     "text": "t l l"
                 }
             },
@@ -129,7 +140,7 @@
                     "numinlets": 2,
                     "numoutlets": 2,
                     "outlettype": [ "", "" ],
-                    "patching_rect": [ 15.0, 120.0, 109.0, 22.0 ],
+                    "patching_rect": [ 15.0, 150.0, 109.0, 22.0 ],
                     "text": "spat5.quat.multiply"
                 }
             }
@@ -137,7 +148,7 @@
         "lines": [
             {
                 "patchline": {
-                    "destination": [ "obj-162", 0 ],
+                    "destination": [ "obj-4", 0 ],
                     "source": [ "obj-1", 0 ]
                 }
             },
@@ -199,6 +210,12 @@
                 "patchline": {
                     "destination": [ "obj-2", 0 ],
                     "source": [ "obj-3", 0 ]
+                }
+            },
+            {
+                "patchline": {
+                    "destination": [ "obj-162", 0 ],
+                    "source": [ "obj-4", 0 ]
                 }
             }
         ]

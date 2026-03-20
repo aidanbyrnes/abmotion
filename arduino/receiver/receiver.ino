@@ -16,6 +16,7 @@ SLIPEncodedSerial SLIPSerial(Serial);
 #endif
 
 #define SENSOR_DATA_LEN 5
+#define SPAT_OFFSET UINT_MAX / 2
 
 typedef struct __attribute__((packed)) {
   unsigned int deviceID;
@@ -34,17 +35,30 @@ void onReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
     memcpy(&incomingPacket, data, sizeof(DataPacket));
 
     OSCBundle bndl;
-    String header = "/abmotion/" + String(incomingPacket.deviceID);
-    String batteryHeader = header + "/b";
-    String motionHeader = header + "/m";
-    String rotationHeader = header + "/r";
+    bool spat = incomingPacket.deviceID > SPAT_OFFSET;
+    unsigned int device_id = spat ? incomingPacket.deviceID - SPAT_OFFSET : incomingPacket.deviceID;
+    String header = "/abmotion/" + String(device_id);
 
+    String batteryHeader = header + "/b";
     bndl.add(batteryHeader.c_str()).add(incomingPacket.battery);
-    bndl.add(motionHeader.c_str()).add(incomingPacket.data[0]);
-    bndl.add(rotationHeader.c_str()).add(incomingPacket.data[1])
-                                    .add(incomingPacket.data[2])
-                                    .add(incomingPacket.data[3])
-                                    .add(incomingPacket.data[4]);
+
+    if(!spat){
+      String motionHeader = header + "/m";
+      String rotationHeader = header + "/r";
+      bndl.add(motionHeader.c_str()).add(incomingPacket.data[0]);
+      bndl.add(rotationHeader.c_str()).add(incomingPacket.data[1])
+                                      .add(incomingPacket.data[2])
+                                      .add(incomingPacket.data[3])
+                                      .add(incomingPacket.data[4]);
+    }
+    else{
+      String distanceHeader = header + "/d";
+      bndl.add(distanceHeader.c_str()).add(incomingPacket.data[0])
+                                      .add(incomingPacket.data[1])
+                                      .add(incomingPacket.data[2])
+                                      .add(incomingPacket.data[3])
+                                      .add(incomingPacket.data[4]);
+    }
 
     SLIPSerial.beginPacket();
     bndl.send(SLIPSerial);
