@@ -10,7 +10,7 @@ Wireless motion devices designed for dance and interactive-immersive art.
 * [TinyCircuits 3.7V 500mAh Battery](https://www.digikey.com/en/products/detail/tinycircuits/ASR00035/9808767)
 * Spatial (tag & base stations): [Ultra-Wide-Band Positioning Development Kit (UWB, BU-03)
 ](https://core-electronics.com.au/ultra-wide-band-module-development-kit-bu03.html)
-* Receiver: any ESP32 device
+* Receiver: any ESP32 or ESP8266 device
   * Recommended (compatible with included case): ESP32-C3 Super Mini Development Board with external antenna
 ## Dependencies
 * Max/MSP
