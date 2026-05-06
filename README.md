@@ -2,7 +2,7 @@ abmotion
 =============
 Wearable OSC motion devices designed for dance and interactive-immersive art.
 
-![Photo of abmotion device.](http://aidanbyrnes.net/media/abmotion.png)
+![Photo of abmotion device.](http://aidanbyrnes.net/media/abmotion_render.png)
 
 ## Hardware
 
