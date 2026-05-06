@@ -40,7 +40,7 @@
                     "numinlets": 1,
                     "numoutlets": 1,
                     "outlettype": [ "" ],
-                    "patching_rect": [ 59.66666799783707, 330.0, 53.0, 22.0 ],
+                    "patching_rect": [ 60.0, 330.0, 53.0, 22.0 ],
                     "text": "o.collect"
                 }
             },
@@ -143,13 +143,11 @@
                                 "box": {
                                     "dontreplace": 1,
                                     "id": "obj-4",
-                                    "linecount": 3,
                                     "maxclass": "message",
                                     "numinlets": 2,
                                     "numoutlets": 1,
                                     "outlettype": [ "" ],
-                                    "patching_rect": [ 15.0, 60.0, 50.0, 22.0 ],
-                                    "text": "usbmodem101"
+                                    "patching_rect": [ 15.0, 60.0, 50.0, 22.0 ]
                                 }
                             },
                             {
@@ -237,18 +235,7 @@
             },
             {
                 "box": {
-                    "id": "obj-2",
-                    "maxclass": "newobj",
-                    "numinlets": 1,
-                    "numoutlets": 3,
-                    "outlettype": [ "", "", "" ],
-                    "patching_rect": [ 150.0, 105.0, 41.0, 22.0 ],
-                    "text": "unjoin"
-                }
-            },
-            {
-                "box": {
-                    "comment": "",
+                    "comment": "port, message in",
                     "id": "obj-10",
                     "index": 1,
                     "maxclass": "inlet",
@@ -256,28 +243,6 @@
                     "numoutlets": 1,
                     "outlettype": [ "" ],
                     "patching_rect": [ 15.0, 15.0, 30.0, 30.0 ]
-                }
-            },
-            {
-                "box": {
-                    "id": "obj-163",
-                    "maxclass": "message",
-                    "numinlets": 2,
-                    "numoutlets": 1,
-                    "outlettype": [ "" ],
-                    "patching_rect": [ 255.0, 150.0, 46.0, 22.0 ],
-                    "text": "port $1"
-                }
-            },
-            {
-                "box": {
-                    "id": "obj-160",
-                    "maxclass": "newobj",
-                    "numinlets": 2,
-                    "numoutlets": 2,
-                    "outlettype": [ "", "" ],
-                    "patching_rect": [ 255.0, 60.0, 79.0, 22.0 ],
-                    "text": "route oscport"
                 }
             },
             {
@@ -312,46 +277,22 @@
             },
             {
                 "patchline": {
-                    "destination": [ "obj-160", 0 ],
-                    "source": [ "obj-158", 1 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-2", 0 ],
-                    "source": [ "obj-158", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-163", 0 ],
-                    "source": [ "obj-160", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-54", 0 ],
-                    "source": [ "obj-18", 0 ]
-                }
-            },
-            {
-                "patchline": {
-                    "destination": [ "obj-163", 0 ],
-                    "source": [ "obj-2", 1 ]
-                }
-            },
-            {
-                "patchline": {
                     "destination": [ "obj-4", 0 ],
                     "order": 0,
-                    "source": [ "obj-2", 0 ]
+                    "source": [ "obj-158", 0 ]
                 }
             },
             {
                 "patchline": {
                     "destination": [ "obj-5", 1 ],
                     "order": 1,
-                    "source": [ "obj-2", 0 ]
+                    "source": [ "obj-158", 0 ]
+                }
+            },
+            {
+                "patchline": {
+                    "destination": [ "obj-54", 0 ],
+                    "source": [ "obj-18", 0 ]
                 }
             },
             {

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <?xml-stylesheet href="./c74ref.xsl" type="text/xsl"?>
 
-<c74object name="abmotion">
+<c74object name="abmotion.receiver">
 
 <digest>
-    Get data from an abmotion device
+    Connect to abmotion receiver
 </digest>
 ​
 <description>
-	Get data from an abmotion device.
+    Connect to abmotion receiver. Routes data to abmotion objects.
 </description>
 
 <!--METADATA-->
@@ -18,16 +18,13 @@
 
 <inletlist>
     <inlet id="0" type="int">
-        <digest>Device ID.</digest>
+        <digest>Device serial port.</digest>
     </inlet>
 </inletlist>
 
 <objarglist>
-    <objarg name="id" optional="1" type="int">
-        <digest>Device ID.</digest>
-    </objarg>
-    <objarg name="motion-scale" optional="1" type="float">
-        <digest>Motion output scale, default it 0.01.</digest>
+    <objarg name="serialport" optional="1" type="int">
+        <digest>Device serial port.</digest>
     </objarg>
 </objarglist>
 
