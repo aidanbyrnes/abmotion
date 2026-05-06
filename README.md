@@ -2,7 +2,7 @@ abmotion
 =============
 Wireless motion devices designed for dance and interactive-immersive art.
 
-Based on the Microbots CodeCell C3 and C6, which are based on the ESP32 C3 and C6 respectively, each device reports the RMS of acceleration, rotation quaternion, and detected transients. Additionally, they can be configured for spatial tracking if connected to a UWB board and additional UWB base stations.
+Based on the Microbots CodeCell C3 and C6, which are based on the ESP32 C3 and C6 respectively, each device reports its own measured RMS of acceleration, rotation quaternion, and detected transients. Additionally, they can be configured for spatial tracking if connected to a UWB board and additional UWB base stations.
 
 A wired receiver connects up to 20 devices through ESP-NOW. Included patches allow for communication with these devices through Max/MSP.
 
