@@ -2,7 +2,8 @@ abmotion
 =============
 Wireless motion devices designed for dance and interactive-immersive art.
 
-![Photo of abmotion device.](http://aidanbyrnes.net/media/abmotion_render.png)
+[![Video of abmotion demo](https://img.youtube.com/vi/6O_tBzo_ZVA/maxresdefault.jpg)](https://www.youtube.com/watch?v=6O_tBzo_ZVA)
+*Video demo of transient detection*
 
 ## Hardware
 
