@@ -6,10 +6,12 @@ Wireless motion devices designed for dance and interactive-immersive art.
 
 ## Hardware
 
-* [Microbots CodeCell C3](https://microbots.io/products/codecell?variant=49714638782797)
+* [Microbots CodeCell C3](https://microbots.io/products/codecell?variant=49714638782797) or [C6](https://microbots.io/products/codecell-c6)
 * [TinyCircuits 3.7V 500mAh Battery](https://www.digikey.com/en/products/detail/tinycircuits/ASR00035/9808767)
-* Optional (spatial only): [Ultra-Wide-Band Positioning Development Kit (UWB, BU-03)
+* Spatial (tag & base stations): [Ultra-Wide-Band Positioning Development Kit (UWB, BU-03)
 ](https://core-electronics.com.au/ultra-wide-band-module-development-kit-bu03.html)
+* Receiver: any ESP32 device
+  * Recommended (compatible with included case): ESP32-C3 Super Mini Development Board with external antenna
 ## Dependencies
 
 * [CNMAT-Externs](https://github.com/CNMAT/CNMAT-Externs) by CNMAT
