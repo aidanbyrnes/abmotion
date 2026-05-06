@@ -13,10 +13,10 @@ Wireless motion devices designed for dance and interactive-immersive art.
 * Receiver: any ESP32 device
   * Recommended (compatible with included case): ESP32-C3 Super Mini Development Board with external antenna
 ## Dependencies
-
-* [CNMAT-Externs](https://github.com/CNMAT/CNMAT-Externs) by CNMAT
-* [ODOT](https://github.com/CNMAT/CNMAT-odot) by CNMAT
-* [Spat](https://forum.ircam.fr/projects/detail/spat/) by IRCAM
+* Max/MSP
+  * [CNMAT-Externs](https://github.com/CNMAT/CNMAT-Externs) by CNMAT
+  * [ODOT](https://github.com/CNMAT/CNMAT-odot) by CNMAT
+  * [Spat](https://forum.ircam.fr/projects/detail/spat/) by IRCAM
 
 ## Contact
 
