@@ -5,12 +5,13 @@
 #include <esp_now.h>
 #include <CodeCell.h>
 
-#define DEVICE_ID 9
-
 #define RX_PIN 21
 #define TX_PIN 22
 
-#define SAMPLERATE 20 // Hz
+#define DEVICE_ID 9
+#define SAMPLERATE 40 // Hz
+#define SEND_RATE 20
+#define WAIT_N_FRAMES (SAMPLERATE / SEND_RATE)
 
 #define RMS_WINDOW 1000 // milliseconds (substantially higher for torso sensor due to gait)
 #define DEADZONE .1
@@ -38,7 +39,7 @@ CodeCell myCodeCell;
 bool radio_on = true;
 unsigned long radioOffSince = 0;
 
-bool send_data = true;
+int frame_counter = 1; // don't send packet immediately on boot
 bool is_idle = false;
 bool is_charging = false;
 
@@ -121,6 +122,7 @@ bool freeze_check() {
   } else {
     frozen_frames = 0;
   }
+
   return false;
 }
 
@@ -191,6 +193,7 @@ void loop() {
     charging_check();
     calc_motion_scalar();
     idle_check();
+
     freeze_check();
 
     if (is_charging || is_idle) {
@@ -230,7 +233,7 @@ void loop() {
       }
     }
 
-    if (send_data && radio_on) {
+    if (frame_counter == 0 && radio_on) {
       unsigned int batt = (unsigned int)min((int)myCodeCell.BatteryLevelRead(), 100);
 
       // Send UWB distances packet
@@ -246,6 +249,6 @@ void loop() {
       esp_now_send(receiverMAC, (uint8_t*)&motionPacket, sizeof(motionPacket));
     }
 
-    send_data = !send_data;
+    frame_counter = (frame_counter + 1) % WAIT_N_FRAMES;
   }
 }

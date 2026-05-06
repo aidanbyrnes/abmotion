@@ -2,16 +2,18 @@
 #include <esp_now.h>
 #include <CodeCell.h>
 
-#define DEVICE_ID 1
-#define SAMPLERATE 20 // Hz
+#define DEVICE_ID 17
+#define SAMPLERATE 40 // Hz
+#define SEND_RATE 20  // Hz
 
-#define RMS_WINDOW 200 // milliseconds
+#define WAIT_N_FRAMES (SAMPLERATE / SEND_RATE)
+
+#define RMS_WINDOW 100 // milliseconds
 #define DEADZONE .1
-#define WAKEUP_THRESHOLD 1.0f
 #define LP_CUTOFF_FREQ 2.0f
 #define MAX_FROZEN 5
-#define RADIO_OFF_RESTART_MS (10UL * 60UL * 1000UL) // 30min in milliseconds
-#define STILL_TIMEOUT_MS 30000 // milliseconds
+#define RADIO_OFF_RESTART_MS (10UL * 60UL * 1000UL) // 10min in milliseconds
+#define STILL_TIMEOUT_MS 30000                       // milliseconds
 
 CodeCell myCodeCell;
 
@@ -27,16 +29,20 @@ typedef struct __attribute__((packed)) {
 
 #define RMS_WINDOW_SAMPS ((int)((float)RMS_WINDOW / 1000.0f * SAMPLERATE))
 
-float rms_buffer[RMS_WINDOW_SAMPS] = {0.0f};;
+float rms_buffer[RMS_WINDOW_SAMPS] = {0.0f};
 int rms_head = 0;
 float rms_sum_sq = 0.0f;
 
-float rms = 0.0;
-float lp = 0.0;
-float lp_alpha = 0.0;
+float rms = 0.0f;
+float rms_prev = 0.0f;
+float lp = 0.0f;
+float lp_alpha = 0.0f;
 int frozen_frames = 0;
 
-bool send_data = true;
+float interval_max_delta = 0.0f; // max RMS rise within the current send interval
+float interval_peak_rms = 0.0f;  // max RMS within the current send interval
+
+int frame_counter = 1; // don't send packet immediately on boot
 bool radio_on = true;
 unsigned long still_since = 0;
 unsigned long radioOffSince = 0; // tracks when radio was turned off
@@ -59,7 +65,7 @@ float calc_lp_alpha(float cutoff_freq, float sample_rate) {
 
 void radio_start() {
   WiFi.mode(WIFI_STA);
-  esp_now_init(); 
+  esp_now_init();
 
   esp_now_peer_info_t peerInfo = {};
   memcpy(peerInfo.peer_addr, receiverMAC, 6);
@@ -68,7 +74,7 @@ void radio_start() {
 
   esp_now_add_peer(&peerInfo);
   radio_on = true;
-  radioOffSince = 0; // clear the off-timer when radio comes back on
+  radioOffSince = 0;
 }
 
 void radio_stop() {
@@ -76,11 +82,9 @@ void radio_stop() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   radio_on = false;
-  if (radioOffSince == 0) radioOffSince = millis(); // start the off-timer
+  if (radioOffSince == 0) radioOffSince = millis();
 }
 
-
-// thorough NaN avoidance
 void calc_motion_scalar() {
   ax_hist = ax;
   ay_hist = ay;
@@ -89,7 +93,6 @@ void calc_motion_scalar() {
   myCodeCell.Motion_LinearAccRead(ax, ay, az);
 
   float new_val = ax * ax + ay * ay + az * az;
-
   if (!isfinite(new_val)) new_val = 0.0f;
 
   rms_sum_sq -= rms_buffer[rms_head];
@@ -99,9 +102,14 @@ void calc_motion_scalar() {
 
   if (rms_sum_sq < 0.0f) rms_sum_sq = 0.0f;
 
+  rms_prev = rms;
   rms = sqrt(rms_sum_sq / RMS_WINDOW_SAMPS);
   rms *= (rms >= DEADZONE);
-  
+
+  float delta = rms - rms_prev;
+  if (delta > interval_max_delta) interval_max_delta = delta;
+  if (rms > interval_peak_rms) interval_peak_rms = rms;
+
   float new_lp = rms * lp_alpha + (1.0f - lp_alpha) * lp;
   if (isfinite(new_lp)) lp = new_lp;
 }
@@ -137,7 +145,7 @@ void charging_check() {
 void idle_check() {
   if (rms < DEADZONE) {
     if (still_since == 0) still_since = millis();
-    if (millis() - still_since >= STILL_TIMEOUT_MS) is_idle=true;
+    if (millis() - still_since >= STILL_TIMEOUT_MS) is_idle = true;
   } else {
     still_since = 0;
     is_idle = false;
@@ -161,7 +169,6 @@ void loop() {
   if (myCodeCell.Run(SAMPLERATE)) {
     myCodeCell.LED_SetBrightness(0);
 
-    // restart if radio has been off for too long (still or charging)
     if (!radio_on && radioOffSince > 0 && millis() - radioOffSince >= RADIO_OFF_RESTART_MS) {
       ESP.restart();
     }
@@ -179,22 +186,24 @@ void loop() {
 
     freeze_check();
 
-    if(is_charging || is_idle){
-      if(radio_on){
-        radio_stop();
-      }
+    if (is_charging || is_idle) {
+      if (radio_on) radio_stop();
       return;
-    }
-    else if(!is_charging && !is_idle && !radio_on){
+    } else if (!is_charging && !is_idle && !radio_on) {
       radio_start();
     }
 
-    if (send_data && radio_on) {
+    if (frame_counter == 0 && radio_on) {
       packet.data[0] = lp;
       packet.data[1] = qw;
       packet.data[2] = qx;
       packet.data[3] = qy;
       packet.data[4] = qz;
+      packet.data[5] = interval_max_delta;
+      packet.data[6] = interval_peak_rms;
+
+      interval_max_delta = 0.0f;
+      interval_peak_rms = 0.0f;
 
       packet.battery = (unsigned int)min((int)myCodeCell.BatteryLevelRead(), 100);
 
@@ -205,6 +214,6 @@ void loop() {
       );
     }
 
-    send_data = !send_data;
+    frame_counter = (frame_counter + 1) % WAIT_N_FRAMES;
   }
 }

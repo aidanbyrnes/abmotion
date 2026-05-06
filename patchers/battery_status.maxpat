@@ -60,6 +60,7 @@
                 "box": {
                     "activebgoncolor": [ 0.0, 0.933333, 1.0, 1.0 ],
                     "id": "obj-4",
+                    "ignoreclick": 1,
                     "maxclass": "live.text",
                     "numinlets": 1,
                     "numoutlets": 2,
@@ -159,14 +160,6 @@
         ],
         "parameters": {
             "obj-4": [ "live.text", "live.text", 0 ],
-            "parameterbanks": {
-                "0": {
-                    "index": 0,
-                    "name": "",
-                    "parameters": [ "-", "-", "-", "-", "-", "-", "-", "-" ],
-                    "buttons": [ "-", "-", "-", "-", "-", "-", "-", "-" ]
-                }
-            },
             "inherited_shortname": 1
         },
         "autosave": 0

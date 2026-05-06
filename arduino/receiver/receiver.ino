@@ -15,8 +15,9 @@ SLIPEncodedUSBSerial SLIPSerial( thisBoardsSerialUSB );
 SLIPEncodedSerial SLIPSerial(Serial);
 #endif
 
-#define SENSOR_DATA_LEN 5
+#define SENSOR_DATA_LEN 8
 #define SPAT_OFFSET UINT_MAX / 2
+
 
 typedef struct __attribute__((packed)) {
   unsigned int deviceID;
@@ -35,29 +36,30 @@ void onReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
     memcpy(&incomingPacket, data, sizeof(DataPacket));
 
     OSCBundle bndl;
-    bool spat = incomingPacket.deviceID > SPAT_OFFSET;
-    unsigned int device_id = spat ? incomingPacket.deviceID - SPAT_OFFSET : incomingPacket.deviceID;
-    String header = "/abmotion/" + String(device_id);
 
-    String batteryHeader = header + "/b";
-    bndl.add(batteryHeader.c_str()).add(incomingPacket.battery);
+    bndl.add("/b").add(incomingPacket.battery);
 
-    if(!spat){
-      String motionHeader = header + "/m";
-      String rotationHeader = header + "/r";
-      bndl.add(motionHeader.c_str()).add(incomingPacket.data[0]);
-      bndl.add(rotationHeader.c_str()).add(incomingPacket.data[1])
-                                      .add(incomingPacket.data[2])
-                                      .add(incomingPacket.data[3])
-                                      .add(incomingPacket.data[4]);
+    unsigned int in_id = incomingPacket.deviceID;
+    if(in_id >= SPAT_OFFSET){
+      bndl.add("/id").add(in_id - SPAT_OFFSET);
+      bndl.add("/d").add(incomingPacket.data[0])
+                    .add(incomingPacket.data[1])
+                    .add(incomingPacket.data[2])
+                    .add(incomingPacket.data[3])
+                    .add(incomingPacket.data[4])
+                    .add(incomingPacket.data[5])
+                    .add(incomingPacket.data[6])
+                    .add(incomingPacket.data[7]);
     }
     else{
-      String distanceHeader = header + "/d";
-      bndl.add(distanceHeader.c_str()).add(incomingPacket.data[0])
-                                      .add(incomingPacket.data[1])
-                                      .add(incomingPacket.data[2])
-                                      .add(incomingPacket.data[3])
-                                      .add(incomingPacket.data[4]);
+      bndl.add("/id").add(in_id);
+      bndl.add("/m").add(incomingPacket.data[0]);
+      bndl.add("/r").add(incomingPacket.data[1])
+                    .add(incomingPacket.data[2])
+                    .add(incomingPacket.data[3])
+                    .add(incomingPacket.data[4]);
+      bndl.add("/delta").add(incomingPacket.data[5]);
+      bndl.add("/peak").add(incomingPacket.data[6]);
     }
 
     SLIPSerial.beginPacket();
