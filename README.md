@@ -3,7 +3,7 @@ abmotion
 Wireless motion devices designed for dance and interactive-immersive art.
 
 [![Video of abmotion demo](https://img.youtube.com/vi/6O_tBzo_ZVA/maxresdefault.jpg)](https://www.youtube.com/watch?v=6O_tBzo_ZVA)
-*Video demo of transient detection*
+*Video of Lily Prescott and Grace Ferrell demonstrating sonified dance through transient detection on abmotion devices.*
 
 ## Hardware
 
